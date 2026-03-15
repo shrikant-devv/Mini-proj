@@ -38,8 +38,29 @@ Then the app auto-maps roll_no to students and submits attendance.
 - `GET /api/classes`
 - `POST /api/attendance/mark` { class_id, date, records }
 
-## Push to GitHub
-Your code is already pushed to `https://github.com/shrikant-devv/Mini-proj`.
+## Architecture & Key Files
+- Backend: `src/server.js`, `src/database.js`, `src/routes/*`
+- Frontend SPA: `src/public/index.html`, `src/public/js/app.js`, `src/public/js/attendance.js`
+- Database persistence: `src/classroom.db` using `sql.js`
+- Auth: `POST /api/auth/login` in `src/routes/auth.js` with `bcryptjs`/JWT
 
-## Notes
-If classes don't appear in attendance dropdown, log in first and ensure the class data is loaded.
+## How to Run Locally
+```bash
+cd src
+npm install
+npm start
+```
+Then open `http://localhost:3000`.
+
+## Common Debug Steps
+1. If UI remains blank, check browser console for JS errors.
+2. If API errors appear, verify server logs and that `/api/classes` returns 200.
+3. If login fails, use seeded credentials and re-run with fresh DB (delete `src/classroom.db`).
+
+## GitHub
+Your code is available at: `https://github.com/shrikant-devv/Mini-proj`
+
+## More Notes
+- The Mark Attendance page requires class loaded from dropdown before loading students.
+- OCR extraction expects clear roll_no + status lines and then auto-marks via backend.
+
