@@ -6,12 +6,18 @@ module.exports = function(db) {
   // POST - Mark attendance in bulk
   router.post('/mark', (req, res) => {
     try {
+      const auth = req.headers.authorization || '';
+      if (!auth.startsWith('Bearer ')) return res.status(401).json({ success: false, error: 'Missing token' });
+      const token = auth.replace('Bearer ', '');
+      const jwt = require('jsonwebtoken');
+      const VALID = jwt.verify(token, process.env.JWT_SECRET || 'eduTrackJWTSecret');
+      if (!VALID || !['professor','admin'].includes(VALID.role)) return res.status(403).json({ success: false, error: 'Forbidden' });
+
       const { class_id, date, records } = req.body;
       if (!class_id || !date || !Array.isArray(records)) {
         return res.status(400).json({ success: false, error: 'class_id, date, and records[] are required' });
       }
       records.forEach(r => {
-        // Check if exists
         const existing = db.prepare('SELECT id FROM attendance WHERE student_id=? AND class_id=? AND date=?').get(r.student_id, class_id, date);
         if (existing) {
           db.prepare('UPDATE attendance SET status=? WHERE student_id=? AND class_id=? AND date=?').run(r.status, r.student_id, class_id, date);

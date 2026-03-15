@@ -17,6 +17,7 @@ async function startServer() {
   app.use(express.static(path.join(__dirname, 'public')));
 
   // API Routes - pass db instance
+  app.use('/api/auth', require('./routes/auth')(db));
   app.use('/api/students', require('./routes/students')(db));
   app.use('/api/classes', require('./routes/classes')(db));
   app.use('/api/attendance', require('./routes/attendance')(db));

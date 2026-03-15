@@ -7,9 +7,12 @@ const API_BASE = '/api';
 // ---- API Helper ----
 async function api(path, options = {}) {
   try {
+    const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+    const user = getCurrentUser();
+    if (user?.token) headers['Authorization'] = 'Bearer ' + user.token;
     const res = await fetch(API_BASE + path, {
-      headers: { 'Content-Type': 'application/json' },
-      ...options
+      ...options,
+      headers
     });
     const data = await res.json();
     if (!res.ok) throw new Error(data.error || 'Request failed');
@@ -41,6 +44,63 @@ document.querySelectorAll('.modal-overlay').forEach(overlay => {
     if (e.target === overlay) overlay.classList.add('hidden');
   });
 });
+
+// ---- Login + Auth ----
+function getCurrentUser() {
+  try { return JSON.parse(localStorage.getItem('edutrackUser') || 'null'); } catch { return null; }
+}
+function setCurrentUser(user) {
+  if (user) localStorage.setItem('edutrackUser', JSON.stringify(user));
+  else localStorage.removeItem('edutrackUser');
+}
+function showLogin(show) {
+  const overlay = document.getElementById('loginOverlay');
+  const logoutBtn = document.getElementById('logoutBtn');
+  const main = document.getElementById('mainContent');
+  const sidebar = document.getElementById('sidebar');
+  if (show) {
+    overlay.classList.remove('hidden');
+    logoutBtn.classList.add('hidden');
+    main.classList.add('hidden');
+    sidebar.classList.add('hidden');
+  } else {
+    overlay.classList.add('hidden');
+    logoutBtn.classList.remove('hidden');
+    main.classList.remove('hidden');
+    sidebar.classList.remove('hidden');
+  }
+}
+
+async function loginUser() {
+  const email = document.getElementById('loginEmail').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+  const role = document.getElementById('loginRole').value;
+  const msg = document.getElementById('loginMessage');
+  msg.textContent = '';
+  if (!email || !password) { msg.textContent = 'Email and password are required'; return; }
+  try {
+    const { data } = await api('/auth/login', { method: 'POST', body: JSON.stringify({ email, password, role }) });
+    if (!data || !data.token) throw new Error('Login failed');
+    setCurrentUser(data);
+    msg.style.color = '#10b981';
+    msg.textContent = `Welcome ${data.name} (${data.role})`;
+    setTimeout(async () => {
+      showLogin(false);
+      applyRolePermissions();
+      await populateClassSelects();
+      navigateTo('dashboard');
+    }, 300);
+  } catch (err) {
+    msg.style.color = '#f87171';
+    msg.textContent = err.message || 'Login failed';
+  }
+}
+
+function logoutUser() {
+  setCurrentUser(null);
+  showLogin(true);
+  navigateTo('dashboard');
+}
 
 // ---- SPA Routing ----
 const pages = {
@@ -127,6 +187,66 @@ function getPctClass(pct) {
   return 'pct-low';
 }
 
+async function onExtractOcr() {
+  const fileInput = document.getElementById('attendanceOcrFile');
+  const resultArea = document.getElementById('ocrResult');
+  if (!fileInput.files.length) {
+    showToast('Please select an image to extract attendance', 'error');
+    return;
+  }
+  const file = fileInput.files[0];
+  try {
+    if (!window.Tesseract) {
+      showToast('OCR engine is not loaded. Please reload page.', 'error');
+      return;
+    }
+    resultArea.value = 'Extracting...';
+    const { data } = await Tesseract.recognize(file, 'eng', { logger: m => console.log(m) });
+    const text = data.text.trim();
+    resultArea.value = text;
+    const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+    const records = [];
+    for (const line of lines) {
+      const parts = line.split(/[\s,;\t]+/);
+      if (parts.length >= 2) {
+        const roll = parts[0].replace(/[^A-Za-z0-9]/g, '');
+        const status = parts[1].toLowerCase().startsWith('p') ? 'present' : parts[1].toLowerCase().startsWith('l') ? 'late' : 'absent';
+        records.push({ roll_no: roll, status });
+      }
+    }
+    if (!records.length) {
+      showToast('No recognizable attendance rows found. Use format "ROLL STATUS".', 'error');
+      return;
+    }
+
+    const classId = document.getElementById('attendanceClassSelect').value;
+    const date = document.getElementById('attendanceDateInput').value;
+    if (!classId || !date) {
+      showToast('Select class and date before OCR auto-marking', 'error');
+      return;
+    }
+
+    const students = await api(`/students?class_id=${classId}`);
+    // match by roll no and map to student_id
+    const studentMap = {};
+    (students.data || []).forEach(s => { studentMap[s.roll_no.toUpperCase()] = s.id; });
+    const matched = records.filter(r => studentMap[r.roll_no.toUpperCase()]).map(r => ({ student_id: studentMap[r.roll_no.toUpperCase()], status: r.status }));
+
+    if (!matched.length) {
+      showToast('No student roll numbers matched in selected class', 'error');
+      return;
+    }
+
+    const payload = { class_id: parseInt(classId), date, records: matched };
+    await api('/attendance/mark', { method: 'POST', body: JSON.stringify(payload) });
+    showToast(`Auto-marked ${matched.length} students using OCR`, 'success');
+    await window.initAttendance?.();
+  } catch (err) {
+    console.error('OCR error', err);
+    showToast('OCR extraction failed: ' + err.message, 'error');
+  }
+}
+
 // ---- Populate class selectors globally ----
 async function populateClassSelects() {
   try {
@@ -150,8 +270,19 @@ async function populateClassSelects() {
 
 // ---- Init ----
 window.addEventListener('DOMContentLoaded', () => {
-  populateClassSelects();
-  navigateTo('dashboard');
+  const currentUser = getCurrentUser();
+  if (!currentUser) {
+    showLogin(true);
+  } else {
+    showLogin(false);
+    applyRolePermissions();
+    populateClassSelects();
+    navigateTo('dashboard');
+  }
+
+  document.getElementById('loginBtn').addEventListener('click', loginUser);
+  document.getElementById('logoutBtn').addEventListener('click', logoutUser);
+  document.getElementById('extractOcrBtn').addEventListener('click', onExtractOcr);
 });
 
 // Expose globally
@@ -162,3 +293,18 @@ window.closeModal = closeModal;
 window.fmtDate = fmtDate;
 window.getPctClass = getPctClass;
 window.populateClassSelects = populateClassSelects;
+function applyRolePermissions() {
+  const user = getCurrentUser();
+  const navAttendance = document.getElementById('nav-attendance');
+  if (!user) return;
+  const role = user.role;
+  if (role === 'student' || role === 'parent') {
+    navAttendance.classList.add('hidden');
+    document.getElementById('nav-classes').classList.add('hidden');
+  } else {
+    navAttendance.classList.remove('hidden');
+    document.getElementById('nav-classes').classList.remove('hidden');
+  }
+}
+
+window.applyRolePermissions = applyRolePermissions;

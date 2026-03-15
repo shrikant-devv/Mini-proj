@@ -115,9 +115,29 @@ const SCHEMA = `
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(student_id, class_id, date)
   );
+  CREATE TABLE IF NOT EXISTS users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    email TEXT NOT NULL UNIQUE,
+    password TEXT NOT NULL,
+    role TEXT NOT NULL DEFAULT 'student',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+  );
 `;
 
 function seedData(db) {
+  // Seed users always if missing
+  const usersCountResult = db._db.exec("SELECT COUNT(*) as cnt FROM users");
+  const usersCount = usersCountResult[0]?.values[0][0] || 0;
+  if (!usersCount) {
+    const bcrypt = require('bcryptjs');
+    const hash = (pwd) => bcrypt.hashSync(pwd, 10);
+    db._db.run("INSERT INTO users (name, email, password, role) VALUES ('Admin', 'admin@edutrack.com', ?, 'admin')", [hash('admin123')]);
+    db._db.run("INSERT INTO users (name, email, password, role) VALUES ('Student User', 'student@edutrack.com', ?, 'student')", [hash('student123')]);
+    db._db.run("INSERT INTO users (name, email, password, role) VALUES ('Parent User', 'parent@edutrack.com', ?, 'parent')", [hash('parent123')]);
+    db._db.run("INSERT INTO users (name, email, password, role) VALUES ('Professor User', 'prof@edutrack.com', ?, 'professor')", [hash('prof123')]);
+  }
+
   const countResult = db._db.exec("SELECT COUNT(*) as cnt FROM classes");
   const count = countResult[0]?.values[0][0] || 0;
   if (count > 0) return;
