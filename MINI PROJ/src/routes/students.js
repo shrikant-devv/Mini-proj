@@ -9,7 +9,7 @@ module.exports = function(db) {
       const { class_id, search } = req.query;
       let sql = `
         SELECT s.id, s.name, s.roll_no, s.email, s.phone, s.class_id, s.created_at,
-          (SELECT GROUP_CONCAT(DISTINCT c.name || ' - ' || c.subject, ', ') FROM student_classes sc
+          (SELECT GROUP_CONCAT(DISTINCT c.name || ' - ' || c.subject) FROM student_classes sc
             JOIN classes c ON sc.class_id = c.id WHERE sc.student_id = s.id) as class_names,
           (SELECT GROUP_CONCAT(DISTINCT sc.class_id) FROM student_classes sc WHERE sc.student_id = s.id) as class_ids,
           (SELECT COUNT(*) FROM attendance a WHERE a.student_id = s.id) as total_classes,
