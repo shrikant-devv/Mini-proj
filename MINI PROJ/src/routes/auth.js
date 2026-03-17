@@ -13,6 +13,7 @@ module.exports = function(db) {
       if (!email || !password) return res.status(400).json({ success: false, error: 'Email and password are required' });
       const user = db.prepare('SELECT id, name, email, role, password FROM users WHERE email = ?').get(email);
       if (!user || !bcrypt.compareSync(password, user.password)) return res.status(401).json({ success: false, error: 'Invalid credentials' });
+      if (req.body.role && req.body.role !== user.role) return res.status(401).json({ success: false, error: 'Invalid role for this account' });
       const token = jwt.sign({ id: user.id, role: user.role, name: user.name, email: user.email }, JWT_SECRET, { expiresIn: '6h' });
       res.json({ success: true, data: { id: user.id, name: user.name, email: user.email, role: user.role, token } });
     } catch (err) {

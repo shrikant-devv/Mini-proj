@@ -115,6 +115,11 @@ const SCHEMA = `
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     UNIQUE(student_id, class_id, date)
   );
+  CREATE TABLE IF NOT EXISTS student_classes (
+    student_id INTEGER NOT NULL,
+    class_id INTEGER NOT NULL,
+    PRIMARY KEY (student_id, class_id)
+  );
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     name TEXT NOT NULL,
@@ -176,7 +181,20 @@ function seedData(db) {
     db._db.run(`INSERT INTO students (name,roll_no,email,phone,class_id) VALUES (?,?,?,?,?)`, s);
   });
 
+  // Seed student-class links
+  const studentClassRows = db._db.exec("SELECT id, class_id FROM students");
+  if (studentClassRows[0]?.values) {
+    studentClassRows[0].values.forEach(r => {
+      const studentId = r[0];
+      const classId = r[1];
+      if (studentId && classId) {
+        db._db.run(`INSERT OR IGNORE INTO student_classes (student_id, class_id) VALUES (?,?)`, [studentId, classId]);
+      }
+    });
+  }
+
   // Seed attendance for last 14 days
+  db._db.run("INSERT OR IGNORE INTO student_classes (student_id, class_id) SELECT id, class_id FROM students WHERE class_id IS NOT NULL");
   const studentRowsRes = db._db.exec("SELECT id, class_id FROM students");
   const studentRows = studentRowsRes[0];
   if (!studentRows || !studentRows.values) { saveDb(); return; }

@@ -46,7 +46,7 @@ function renderStudentsTable(students) {
           <span style="font-weight:600">${s.name}</span>
         </div>
       </td>
-      <td>${s.class_name ? `<span style="color:var(--accent-purple)">${s.class_name}</span><br><span style="font-size:11px;color:var(--text-muted)">${s.subject || ''}</span>` : '<span style="color:var(--text-muted)">—</span>'}</td>
+      <td>${s.class_names ? `<span style="color:var(--accent-purple)">${s.class_names}</span>` : '<span style="color:var(--text-muted)">—</span>'}</td>
       <td style="color:var(--text-muted)">${s.email || '—'}</td>
       <td>
         <span class="pct-badge ${pctClass}">${pctText}</span>
@@ -92,12 +92,13 @@ function setupStudentForm() {
   document.getElementById('studentForm').addEventListener('submit', async e => {
     e.preventDefault();
     const id = document.getElementById('studentId').value;
+    const selectedClassOptions = Array.from(document.getElementById('studentClasses').selectedOptions).map(o => o.value).filter(v => v);
     const payload = {
       name: document.getElementById('studentName').value.trim(),
       roll_no: document.getElementById('studentRoll').value.trim(),
       email: document.getElementById('studentEmail').value.trim(),
       phone: document.getElementById('studentPhone').value.trim(),
-      class_id: document.getElementById('studentClass').value || null
+      class_ids: selectedClassOptions
     };
     try {
       if (id) {
@@ -126,7 +127,14 @@ async function editStudent(id) {
   document.getElementById('studentRoll').value = student.roll_no;
   document.getElementById('studentEmail').value = student.email || '';
   document.getElementById('studentPhone').value = student.phone || '';
-  document.getElementById('studentClass').value = student.class_id || '';
+  const classSelect = document.getElementById('studentClasses');
+  Array.from(classSelect.options).forEach(opt => { opt.selected = false; });
+  if (student.class_ids) {
+    const ids = student.class_ids.split(',');
+    Array.from(classSelect.options).forEach(opt => {
+      if (ids.includes(opt.value)) opt.selected = true;
+    });
+  }
   document.getElementById('studentSubmitBtn').textContent = 'Save Changes';
   openModal('studentModal');
 }

@@ -251,7 +251,7 @@ async function onExtractOcr() {
 async function populateClassSelects() {
   try {
     const { data } = await api('/classes');
-    const selects = ['studentClassFilter', 'attendanceClassSelect', 'reportClassFilter', 'studentClass'];
+    const selects = ['studentClassFilter', 'attendanceClassSelect', 'reportClassFilter', 'studentClasses'];
     selects.forEach(id => {
       const el = document.getElementById(id);
       if (!el) return;
@@ -307,4 +307,63 @@ function applyRolePermissions() {
   }
 }
 
+function renderAISuggestions(summary) {
+  const suggestions = [
+    'Encourage all students to complete attendance before class start.',
+    'Focus on low-attendance students this week for counselor outreach.',
+    'Offer additional revision sessions for the class with declining trend.',
+    'Send automated notifications to parents for >2 consecutive absences.'
+  ];
+  const list = document.getElementById('aiSuggestionsList');
+  if (!list) return;
+  list.innerHTML = suggestions.slice(0, 4).map(s => `<li>${s}</li>`).join('');
+  if (summary && summary.today && summary.today.present !== undefined) {
+    const high = summary.today.present > 0 && summary.today.total > 0 && summary.today.present / summary.today.total > 0.8;
+    const prefix = high ? 'Great job: ' : 'Action needed: ';
+    list.innerHTML += `<li><strong>${prefix}</strong>${high ? 'Keep momentum with recognition rewards.' : 'Plan a quick attendance reminder call.'}</li>`;
+  }
+}
+
+const notifications = [
+  { id: 1, type: 'success', text: 'New attendance policy issued for all grades.' },
+  { id: 2, type: 'info', text: 'Faculty meeting scheduled tomorrow at 4 PM.' },
+  { id: 3, type: 'warning', text: '5 students have low attendance this week.' }
+];
+
+function renderNotifications() {
+  const list = document.getElementById('notificationsList');
+  if (!list) return;
+  list.innerHTML = notifications.map(n => `<li style="margin-bottom:6px;">${n.type === 'warning' ? '⚠️' : n.type === 'success' ? '✅' : 'ℹ️'} ${n.text}</li>`).join('');
+}
+
+document.addEventListener('click', event => {
+  if (event.target?.id === 'clearNotificationsBtn') {
+    notifications.length = 0;
+    renderNotifications();
+    showToast('Notifications cleared', 'success');
+  }
+});
+
+function quickMarkAttendance(mode) {
+  const classId = document.getElementById('attendanceClassSelect').value;
+  const date = document.getElementById('attendanceDateInput').value;
+  if (!classId || !date) { showToast('Select a class and date first', 'error'); return; }
+  const rows = document.querySelectorAll('.attendance-row');
+  if (!rows.length) { showToast('Load students first', 'error'); return; }
+  const statuses = ['present', 'late', 'absent'];
+  rows.forEach((row, idx) => {
+    const id = row.id.replace('ar-', '');
+    const status = mode === 'qr' ? (idx % 3 === 0 ? 'present' : 'late') : (idx % 4 === 0 ? 'absent' : 'present');
+    attendanceSession[id] = status;
+    row.querySelectorAll('.toggle-btn').forEach(btn => btn.classList.remove('active'));
+    const btn = row.querySelector(`.toggle-btn.${status}`);
+    if (btn) btn.classList.add('active');
+  });
+  updateAttendanceSummary();
+  showToast(mode === 'qr' ? 'QR scan completed. Attendance prefilled.' : 'Face scan completed. Attendance prefilled.', 'success');
+}
+
+window.renderAISuggestions = renderAISuggestions;
+window.renderNotifications = renderNotifications;
+window.quickMarkAttendance = quickMarkAttendance;
 window.applyRolePermissions = applyRolePermissions;

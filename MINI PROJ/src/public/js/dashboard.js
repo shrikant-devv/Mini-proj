@@ -34,6 +34,8 @@ async function loadDashboardStats() {
 
     document.getElementById('stat-present-pct').textContent = total > 0 ? `${Math.round((present / total) * 100)}% Rate` : 'No data today';
     document.getElementById('stat-late-count').textContent = `${late} Late`;
+    window.renderAISuggestions?.(data);
+    window.renderNotifications?.();
 
     // Weekly data
     const dates = data.weeklyTrend?.map?.(d => fmtDate(d.date)) || [];

@@ -154,7 +154,11 @@ module.exports = function(db) {
       const { class_id, date } = req.query;
       if (!class_id || !date) return res.status(400).json({ success: false, error: 'class_id and date required' });
 
-      const students = db.prepare('SELECT id as student_id, name, roll_no FROM students WHERE class_id = ? ORDER BY roll_no').all(class_id);
+      const students = db.prepare(`SELECT s.id as student_id, s.name, s.roll_no FROM students s
+        JOIN student_classes sc ON sc.student_id = s.id
+        WHERE sc.class_id = ?
+        GROUP BY s.id
+        ORDER BY s.roll_no`).all(class_id);
       const existing = db.prepare('SELECT student_id, status FROM attendance WHERE class_id = ? AND date = ?').all(class_id, date);
       const existingMap = {};
       existing.forEach(r => { existingMap[r.student_id] = r.status; });

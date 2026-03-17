@@ -9,6 +9,10 @@ async function initAttendance() {
   document.getElementById('markAllPresent').addEventListener('click', () => setAllStatus('present'));
   document.getElementById('markAllAbsent').addEventListener('click', () => setAllStatus('absent'));
   document.getElementById('submitAttendanceBtn').addEventListener('click', submitAttendance);
+  const qr = document.getElementById('scanQrBtn');
+  const face = document.getElementById('scanFaceBtn');
+  if (qr) qr.addEventListener('click', () => window.quickMarkAttendance('qr'));
+  if (face) face.addEventListener('click', () => window.quickMarkAttendance('face'));
 }
 
 async function loadAttendanceSession() {
