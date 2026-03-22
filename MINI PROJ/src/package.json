@@ -3,10 +3,9 @@
   "version": "1.0.0",
   "description": "Smart Classroom Management System with Attendance Analytics",
   "main": "server.js",
-  "scripts": {
-    "start": "node server.js",
-    "dev": "node server.js"
-  },
+ "scripts": {
+  "start": "node server.js"
+},
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "body-parser": "^1.20.2",

@@ -9,7 +9,7 @@ async function startServer() {
   const db = await initDb();
 
   const app = express();
-  const PORT = process.env.PORT || 3000;
+  const PORT = 5000;
 
   // Middleware
   app.use(cors());
