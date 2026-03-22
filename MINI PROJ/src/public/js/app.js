@@ -53,19 +53,29 @@ function setCurrentUser(user) {
   if (user) localStorage.setItem('edutrackUser', JSON.stringify(user));
   else localStorage.removeItem('edutrackUser');
 }
+function setLogoutVisibility(pageName) {
+  const logoutBtn = document.getElementById('logoutBtn');
+  if (!logoutBtn) return;
+  const user = getCurrentUser();
+  if (user && pageName === 'reports') {
+    logoutBtn.classList.remove('hidden');
+  } else {
+    logoutBtn.classList.add('hidden');
+  }
+}
+
 function showLogin(show) {
   const overlay = document.getElementById('loginOverlay');
-  const logoutBtn = document.getElementById('logoutBtn');
   const main = document.getElementById('mainContent');
   const sidebar = document.getElementById('sidebar');
   if (show) {
     overlay.classList.remove('hidden');
-    logoutBtn.classList.add('hidden');
+    setLogoutVisibility('');
     main.classList.add('hidden');
     sidebar.classList.add('hidden');
   } else {
     overlay.classList.add('hidden');
-    logoutBtn.classList.remove('hidden');
+    setLogoutVisibility(currentPage || 'dashboard');
     main.classList.remove('hidden');
     sidebar.classList.remove('hidden');
   }
@@ -131,6 +141,7 @@ function navigateTo(pageName) {
     document.getElementById('pageSubtitle').textContent = cfg.subtitle;
     if (cfg.init) cfg.init();
   }
+  setLogoutVisibility(pageName);
 }
 
 document.querySelectorAll('.nav-item').forEach(item => {
