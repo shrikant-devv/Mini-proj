@@ -53,14 +53,14 @@ function setCurrentUser(user) {
   if (user) localStorage.setItem('edutrackUser', JSON.stringify(user));
   else localStorage.removeItem('edutrackUser');
 }
-function setLogoutVisibility(pageName) {
-  const logoutBtn = document.getElementById('logoutBtn');
-  if (!logoutBtn) return;
+function setLogoutVisibility() {
+  const navLogout = document.getElementById('nav-logout');
+  if (!navLogout) return;
   const user = getCurrentUser();
-  if (user && pageName === 'reports') {
-    logoutBtn.classList.remove('hidden');
+  if (user) {
+    navLogout.classList.remove('hidden');
   } else {
-    logoutBtn.classList.add('hidden');
+    navLogout.classList.add('hidden');
   }
 }
 
@@ -70,12 +70,12 @@ function showLogin(show) {
   const sidebar = document.getElementById('sidebar');
   if (show) {
     overlay.classList.remove('hidden');
-    setLogoutVisibility('');
+    setLogoutVisibility();
     main.classList.add('hidden');
     sidebar.classList.add('hidden');
   } else {
     overlay.classList.add('hidden');
-    setLogoutVisibility(currentPage || 'dashboard');
+    setLogoutVisibility();
     main.classList.remove('hidden');
     sidebar.classList.remove('hidden');
   }
@@ -292,7 +292,10 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   document.getElementById('loginBtn').addEventListener('click', loginUser);
-  document.getElementById('logoutBtn').addEventListener('click', logoutUser);
+  const navLogout = document.getElementById('nav-logout');
+  if (navLogout) {
+    navLogout.addEventListener('click', e => { e.preventDefault(); logoutUser(); });
+  }
   document.getElementById('extractOcrBtn').addEventListener('click', onExtractOcr);
 });
 
